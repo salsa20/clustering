@@ -113,7 +113,8 @@ Jika tidak tersedia, Frequency dihitung berdasarkan jumlah baris transaksi.
     uploaded = st.file_uploader("Upload CSV transaksi", type=["csv"])
 
     if uploaded is not None:
-        data = pd.read_csv(uploaded)
+        data = pd.read_csv(uploaded, sep=None, engine="python", encoding="utf-8-sig")
+        data.columns = data.columns.str.strip()
     else:
         np.random.seed(42)
         customers = [f"C{1000+i}" for i in range(30)]
@@ -137,9 +138,13 @@ Jika tidak tersedia, Frequency dihitung berdasarkan jumlah baris transaksi.
         st.error("File harus memiliki kolom CustomerID, InvoiceDate, dan Amount.")
         st.stop()
 
-    data["InvoiceDate"] = pd.to_datetime(data["InvoiceDate"], errors="coerce")
+    data["InvoiceDate"] = pd.to_datetime(data["InvoiceDate"], errors="coerce", dayfirst=True)
     data["Amount"] = pd.to_numeric(data["Amount"], errors="coerce")
     data = data.dropna(subset=["CustomerID", "InvoiceDate", "Amount"])
+
+    if data.empty:
+        st.error("Tidak ada baris transaksi valid setelah pembersihan data. Periksa format tanggal dan Amount.")
+        st.stop()
 
     st.subheader("Data Transaksi")
     st.dataframe(data.head(20), use_container_width=True, hide_index=True)
@@ -199,7 +204,7 @@ Jika tidak tersedia, Frequency dihitung berdasarkan jumlah baris transaksi.
     c1, c2, c3 = st.columns(3)
     c1.metric("Jumlah Pelanggan", len(rfm))
     c2.metric("Rata-rata Frequency", f"{rfm['Frequency'].mean():.1f}")
-    c3.metric("Total Monetary", f"Rp{rfm['Monetary'].sum():,.0f}".replace(",", "."))
+    c3.metric("Total Monetary (satuan asli data)", f"{rfm['Monetary'].sum():,.2f}")
 
     st.subheader("Distribusi Segmentasi Pelanggan")
 
